@@ -1,0 +1,26 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  ACR_NAME: 'acrdemoabb'
+  IMAGE_NAME: 'myapp'
+  TAG: '$(Build.BuildId)'
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+    - script: |
+        docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG) .
+        echo "$(ACR_PASSWORD)" | docker login $(ACR_NAME).azurecr.io -u $(ACR_USERNAME) --password-stdin
+        docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
+      env:
+        ACR_USERNAME: $(ACR_USERNAME)
+        ACR_PASSWORD: $(ACR_PASSWORD)
+      displayName: 'Build and Push Docker Image'
