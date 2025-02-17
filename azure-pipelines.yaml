@@ -7,9 +7,10 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  ACR_NAME: 'acrdemoabb'
+  ACR_NAME: 'myacr'
   IMAGE_NAME: 'myapp'
   TAG: '$(Build.BuildId)'
+  -group: ACR-Secrets  # This will fetch ACR_USERNAME and ACR_PASSWORD
 
 stages:
 - stage: Build
@@ -20,7 +21,7 @@ stages:
         docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG) .
         echo "$(ACR_PASSWORD)" | docker login $(ACR_NAME).azurecr.io -u $(ACR_USERNAME) --password-stdin
         docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
-      env:
-        ACR_USERNAME: $(ACR_USERNAME)
-        ACR_PASSWORD: $(ACR_PASSWORD)
       displayName: 'Build and Push Docker Image'
+
+
+      
