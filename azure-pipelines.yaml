@@ -7,10 +7,13 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  ACR_NAME: 'myacr'
-  IMAGE_NAME: 'myapp'
-  TAG: '$(Build.BuildId)'
+  ACR_NAME: 'acrdemoabb'
+  IMAGE_NAME: 'sampleapp'
+  AKS_RESOURCE_GROUP: 'Terraform-ABB-DEMO'
+  AKS_CLUSTER_NAME: 'ABB_Demo_Cluster'
+  NAMESPACE: 'default'
   -group: ACR-Secrets  # This will fetch ACR_USERNAME and ACR_PASSWORD
+
 
 stages:
 - stage: Build
@@ -23,5 +26,21 @@ stages:
         docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
       displayName: 'Build and Push Docker Image'
 
+- stage: Deploy_to_AKS
+  displayName: 'Deploy to AKS'
+  jobs:
+  - job: Deploy
+    steps:
+    - task: Kubernetes@1
+      displayName: 'Login to AKS & Deploy'
+      inputs:
+        connectionType: 'Azure Resource Manager'
+        azureSubscriptionEndpoint: 'Azure-Terraform-Connection' #this is service-connection created to communicate with the azure resources 
+        azureResourceGroup: '$(AKS_RESOURCE_GROUP)'
+        kubernetesCluster: '$(AKS_CLUSTER_NAME)'
+        useClusterAdmin: true
 
+    - script: |
+        kubectl apply -f deployment.yaml
+      displayName: 'Apply Kubernetes Deployment'
       
