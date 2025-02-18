@@ -11,9 +11,21 @@ variables:
   IMAGE_NAME: 'sampleapp'
   AKS_RESOURCE_GROUP: 'Terraform-ABB-DEMO'
   AKS_CLUSTER_NAME: 'ABB_Demo_Cluster'
-  NAMESPACE: 'default'
-  -group: ACR-Secrets  # This will fetch ACR_USERNAME and ACR_PASSWORD
+  - group: ACR-Secrets  # Fetch ACR credentials
 
+parameters:
+  - name: environment
+    displayName: 'Select Deployment Environment'
+    type: string
+    default: 'dev'
+    values:
+      - dev
+      - test
+      - preprod
+      - prod
+
+variables:
+  NAMESPACE: ${{ parameters.environment }}
 
 stages:
 - stage: Build
@@ -21,9 +33,9 @@ stages:
   - job: Build
     steps:
     - script: |
-        docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG) .
+        docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(Build.BuildId) .
         echo "$(ACR_PASSWORD)" | docker login $(ACR_NAME).azurecr.io -u $(ACR_USERNAME) --password-stdin
-        docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
+        docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(Build.BuildId)
       displayName: 'Build and Push Docker Image'
 
 - stage: Deploy_to_AKS
@@ -32,17 +44,16 @@ stages:
   - job: Deploy
     steps:
     - task: Kubernetes@1
-      displayName: 'Login to AKS & Deploy'
+      displayName: 'Login to AKS'
       inputs:
         connectionType: 'Azure Resource Manager'
-        azureSubscriptionEndpoint: 'Azure-Terraform-Connection' #this is service-connection created to communicate with the azure resources 
+        azureSubscriptionEndpoint: 'Azure-Terraform-Connection'
         azureResourceGroup: '$(AKS_RESOURCE_GROUP)'
         kubernetesCluster: '$(AKS_CLUSTER_NAME)'
         useClusterAdmin: true
 
     - script: |
-        kubectl apply -f deployment.yaml
-        kubectl apply -f service.yaml
+        echo "Deploying to Namespace: $(NAMESPACE)"
+        kubectl apply -f deployment.yaml -n $(NAMESPACE)
+        kubectl apply -f service.yaml -n $(NAMESPACE)
       displayName: 'Apply Kubernetes Deployment'
-      
-
