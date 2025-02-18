@@ -12,11 +12,12 @@ variables:
   AKS_RESOURCE_GROUP: 'Terraform-ABB-DEMO'
   AKS_CLUSTER_NAME: 'ABB_Demo_Cluster'
   NAMESPACE: 'default'
+  TAG: $(Build.BuildId)
   -group: ACR-Secrets  # This will fetch ACR_USERNAME and ACR_PASSWORD
 
 parameters:
   - name: environment
-    displayName: 'Select Deployment Environment'
+    displayName: 'Select Deployment Namespace'
     type: string
     default: 'dev'
     values:
@@ -32,7 +33,7 @@ stages:
   - job: Build
     steps:
     - script: |
-        docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):latest .
+        docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
         echo "$(ACR_PASSWORD)" | docker login $(ACR_NAME).azurecr.io -u $(ACR_USERNAME) --password-stdin
         docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
       displayName: 'Build and Push Docker Image'
@@ -52,6 +53,7 @@ stages:
         useClusterAdmin: true
 
     - script: |
-        kubectl apply -f deployment.yaml -n ${{parameters.environment}}
-        kubectl apply -f service.yaml -n ${{parameters.environment}}
+        echo "Deploying to Namespace: $(NAMESPACE)"
+        kubectl apply -f deployment.yaml -n $(NAMESPACE)
+        kubectl apply -f service.yaml -n $(NAMESPACE)
       displayName: 'Apply Kubernetes Deployment'
