@@ -25,7 +25,7 @@ parameters:
       - test
       - preprod
       - prod
-
+      - all 
 
 stages:
 - stage: Build
@@ -38,22 +38,62 @@ stages:
         docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
       displayName: 'Build and Push Docker Image'
 
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+    - script: |
+        docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG) .
+        echo "$(ACR_PASSWORD)" | docker login $(ACR_NAME).azurecr.io -u $(ACR_USERNAME) --password-stdin
+        docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
+      displayName: 'Build and Push Docker Image'
+
 - stage: Deploy_to_AKS
   displayName: 'Deploy to AKS'
   jobs:
-  - job: Deploy
-    steps:
-    - task: Kubernetes@1
-      displayName: 'Login to AKS & Deploy'
-      inputs:
-        connectionType: 'Azure Resource Manager'
-        azureSubscriptionEndpoint: 'Azure-Terraform-Connection' #this is service-connection created to communicate with the azure resources 
-        azureResourceGroup: '$(AKS_RESOURCE_GROUP)'
-        kubernetesCluster: '$(AKS_CLUSTER_NAME)'
-        useClusterAdmin: true
+  - ${{ if eq(parameters.environment, 'all') }}:
+    - job: Deploy_All
+      strategy:
+        matrix:
+          dev:
+            NAMESPACE: 'dev'
+          test:
+            NAMESPACE: 'test'
+          preprod:
+            NAMESPACE: 'preprod'
+          prod:
+            NAMESPACE: 'prod'
+      steps:
+      - task: Kubernetes@1
+        displayName: 'Login to AKS'
+        inputs:
+          connectionType: 'Azure Resource Manager'
+          azureSubscriptionEndpoint: 'Azure-Terraform-Connection'
+          azureResourceGroup: '$(AKS_RESOURCE_GROUP)'
+          kubernetesCluster: '$(AKS_CLUSTER_NAME)'
+          useClusterAdmin: true
 
-    - script: |
-        echo "Deploying to Namespace: $(NAMESPACE)"
-        kubectl apply -f deployment.yaml -n $(NAMESPACE)
-        kubectl apply -f service.yaml -n $(NAMESPACE)
-      displayName: 'Apply Kubernetes Deployment'
+      - script: |
+          echo "Deploying to Namespace: $(NAMESPACE)"
+          kubectl apply -f deployment.yaml -n $(NAMESPACE)
+          kubectl apply -f service.yaml -n $(NAMESPACE)
+        displayName: 'Apply Kubernetes Deployment'
+
+  - ${{ if ne(parameters.environment, 'all') }}:
+    - job: Deploy_Single
+      steps:
+      - task: Kubernetes@1
+        displayName: 'Login to AKS'
+        inputs:
+          connectionType: 'Azure Resource Manager'
+          azureSubscriptionEndpoint: 'Azure-Terraform-Connection'
+          azureResourceGroup: '$(AKS_RESOURCE_GROUP)'
+          kubernetesCluster: '$(AKS_CLUSTER_NAME)'
+          useClusterAdmin: true
+
+      - script: |
+          echo "Deploying to Namespace: ${{ parameters.environment }}"
+          kubectl apply -f deployment.yaml -n ${{ parameters.environment }}
+          kubectl apply -f service.yaml -n ${{ parameters.environment }}
+        displayName: 'Apply Kubernetes Deployment'
