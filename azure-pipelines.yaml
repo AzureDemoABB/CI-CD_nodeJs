@@ -7,12 +7,12 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
+- group: ACR-Secrets  # Fetch ACR credentials
   ACR_NAME: 'acrdemoabb'
   IMAGE_NAME: 'sampleapp'
   AKS_RESOURCE_GROUP: 'Terraform-ABB-DEMO'
   AKS_CLUSTER_NAME: 'ABB_Demo_Cluster'
-  - group: ACR-Secrets  # Fetch ACR credentials
-
+  
 parameters:
   - name: environment
     displayName: 'Select Deployment Environment'
