@@ -11,41 +11,20 @@ variables:
   IMAGE_NAME: 'sampleapp'
   AKS_RESOURCE_GROUP: 'Terraform-ABB-DEMO'
   AKS_CLUSTER_NAME: 'ABB_Demo_Cluster'
+  NAMESPACE: 'default'
+  -group: ACR-Secrets  # This will fetch ACR_USERNAME and ACR_PASSWORD
 
-
-parameters:
-  - name: environment
-    displayName: 'Select Deployment Environment'
-    type: string
-    default: 'dev'
-    values:
-      - dev
-      - test
-      - preprod
-      - prod
-
-variables:
-  NAMESPACE: ${{ parameters.environment }}
 
 stages:
 - stage: Build
-  displayName: 'Build and Push Docker Image'
   jobs:
   - job: Build
     steps:
-    - task: Bash@3
+    - script: |
+        docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG) .
+        echo "$(ACR_PASSWORD)" | docker login $(ACR_NAME).azurecr.io -u $(ACR_USERNAME) --password-stdin
+        docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
       displayName: 'Build and Push Docker Image'
-      inputs:
-        targetType: 'inline'
-        script: |
-          echo "Building Docker image..."
-          docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(Build.BuildId) .
-          
-          echo "Logging in to ACR..."
-          echo "$(ACR_PASSWORD)" | docker login $(ACR_NAME).azurecr.io -u $(ACR_USERNAME) --password-stdin
-          
-          echo "Pushing Docker image to ACR..."
-          docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(Build.BuildId)
 
 - stage: Deploy_to_AKS
   displayName: 'Deploy to AKS'
@@ -53,19 +32,15 @@ stages:
   - job: Deploy
     steps:
     - task: Kubernetes@1
-      displayName: 'Login to AKS'
+      displayName: 'Login to AKS & Deploy'
       inputs:
         connectionType: 'Azure Resource Manager'
-        azureSubscriptionEndpoint: 'Azure-Terraform-Connection'
+        azureSubscriptionEndpoint: 'Azure-Terraform-Connection' #this is service-connection created to communicate with the azure resources 
         azureResourceGroup: '$(AKS_RESOURCE_GROUP)'
         kubernetesCluster: '$(AKS_CLUSTER_NAME)'
         useClusterAdmin: true
 
-    - task: Bash@3
-      displayName: 'Deploy to AKS Namespace: $(NAMESPACE)'
-      inputs:
-        targetType: 'inline'
-        script: |
-          echo "Using Namespace: $(NAMESPACE)"
-          kubectl apply -f deployment.yaml -n $(NAMESPACE)
-          kubectl apply -f service.yaml -n $(NAMESPACE)
+    - script: |
+        kubectl apply -f deployment.yaml
+        kubectl apply -f service.yaml
+      displayName: 'Apply Kubernetes Deployment'
