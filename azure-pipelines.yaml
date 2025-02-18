@@ -52,6 +52,6 @@ stages:
         useClusterAdmin: true
 
     - script: |
-        kubectl apply -f deployment.yaml
+        kubectl apply -f deployment.yaml -n ${{parameters.environment}}
         kubectl apply -f service.yaml -n ${{parameters.environment}}
       displayName: 'Apply Kubernetes Deployment'
