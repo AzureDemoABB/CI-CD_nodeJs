@@ -14,6 +14,17 @@ variables:
   NAMESPACE: 'default'
   -group: ACR-Secrets  # This will fetch ACR_USERNAME and ACR_PASSWORD
 
+parameters:
+  - name: environment
+    displayName: 'Select Deployment Environment'
+    type: string
+    default: 'dev'
+    values:
+      - dev
+      - test
+      - preprod
+      - prod
+
 
 stages:
 - stage: Build
@@ -42,5 +53,5 @@ stages:
 
     - script: |
         kubectl apply -f deployment.yaml
-        kubectl apply -f service.yaml
+        kubectl apply -f service.yaml -n ${{parameters.environment}}
       displayName: 'Apply Kubernetes Deployment'
