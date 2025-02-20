@@ -76,6 +76,15 @@ stages:
             az account set --subscription $(subscription-id)
             
             echo "Successfully authenticated with Azure CLI"
+
+
+            az aks get-credentials --resource-group ${{ parameters.resource_group }} --name ${{ parameters.cluster_name }} --overwrite-existing
+          
+            echo "Verifying AKS Connection"
+            kubectl config current-context
+            kubectl cluster-info
+            kubectl get nodes
+    
   
       - task: Bash@3
         displayName: "Set & Verify AKS Kubeconfig"
