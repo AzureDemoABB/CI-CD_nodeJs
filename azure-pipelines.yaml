@@ -104,6 +104,7 @@ stages:
 
           kubectl apply -f deployment.yaml -n ${{ parameters.namespace }} --validate=false
           kubectl apply -f service.yaml -n ${{ parameters.namespace }} --validate=false
+          sleep 15
           kubectl get svc myappabb-service -n ${{ parameters.namespace }}
           echo " Get the External IP of the sevice and access the application in your browser"
         displayName: 'Apply Kubernetes Deployment (Validation Off)'
