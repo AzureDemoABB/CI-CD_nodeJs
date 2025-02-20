@@ -63,12 +63,6 @@ stages:
           azureResourceGroup: ${{ parameters.resource_group }}
           kubernetesCluster: ${{ parameters.cluster_name }}
           useClusterAdmin: true
-          
-      - script: |
-          echo "Verifying AKS Connection"
-          kubectl config current-context
-          kubectl get nodes
-        displayName: 'Verify AKS Connection'
 
       - script: |
           echo "Setting AKS kubeconfig"
