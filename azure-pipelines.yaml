@@ -1,32 +1,42 @@
-trigger:
-  branches:
-    include:
-      - main
+trigger: none
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  ACR_NAME: 'acrdemoabb'
-  IMAGE_NAME: 'sampleapp'
-  AKS_RESOURCE_GROUP: 'Terraform-ABB-DEMO'
-  AKS_CLUSTER_NAME: 'ABB_Demo_Cluster'
-  NAMESPACE: 'default'
   TAG: $(Build.BuildId)
   -group: ACR-Secrets  # This will fetch ACR_USERNAME and ACR_PASSWORD
 
 parameters:
-  - name: environment
+  - name: namespace
     displayName: 'Select Deployment Namespace'
     type: string
     default: 'dev'
     values:
-      - dev
-      - test
+      - nonprod
       - preprod
       - prod
       - all 
 
+  - name : acr_name
+    displayName: ACR Name
+    type: string
+    default: 'acrdemoabb'
+  
+  - name : image_name
+    displayName: Image Name
+    type: string
+    default: 'sampleapp'
+
+  - name : cluster_name
+    displayName: Cluster Name
+    type: string
+    default: 'ABB_Demo_Cluster'
+
+  - name : resource_group
+    displayName: Resource group Name
+    type: string
+    default: 'Terraform-ABB-DEMO'
 
 stages:
 - stage: Build
@@ -34,15 +44,15 @@ stages:
   - job: Build
     steps:
     - script: |
-        docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG) .
+        docker build -t ${{ parameters.acr_name }}.azurecr.io/${{ parameters.image_name }}:$(TAG) .
         echo "$(ACR_PASSWORD)" | docker login $(ACR_NAME).azurecr.io -u $(ACR_USERNAME) --password-stdin
-        docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(TAG)
+        docker push ${{ parameters.acr_name }}.azurecr.io/${{ parameters.image_name }}:$(TAG)
       displayName: 'Build and Push Docker Image'
 
 - stage: Deploy_to_AKS
   displayName: 'Deploy to AKS'
   jobs:
-  - ${{ if eq(parameters.environment, 'all') }}:
+  - ${{ if eq(parameters.namespace, 'all') }}:
     - job: Deploy_All
       strategy:
         matrix:
@@ -60,17 +70,17 @@ stages:
         inputs:
           connectionType: 'Azure Resource Manager'
           azureSubscriptionEndpoint: 'Azure-Terraform-Connection'
-          azureResourceGroup: '$(AKS_RESOURCE_GROUP)'
-          kubernetesCluster: '$(AKS_CLUSTER_NAME)'
+          azureResourceGroup: ${{ parameters.resource_group }}
+          kubernetesCluster: ${{ parameters.cluster_name }}
           useClusterAdmin: true
 
       - script: |
-          echo "Deploying to Namespace: $(NAMESPACE)"
-          kubectl apply -f deployment.yaml -n $(NAMESPACE)
-          kubectl apply -f service.yaml -n $(NAMESPACE)
+          echo "Deploying to Namespace: ${{ parameters.namespace }}"
+          kubectl apply -f deployment.yaml -n ${{ parameters.namespace }}
+          kubectl apply -f service.yaml -n ${{ parameters.namespace }}
         displayName: 'Apply Kubernetes Deployment'
 
-  - ${{ if ne(parameters.environment, 'all') }}:
+  - ${{ if ne(parameters.namespace, 'all') }}:
     - job: Deploy_Single
       steps:
       - task: Kubernetes@1
@@ -78,12 +88,12 @@ stages:
         inputs:
           connectionType: 'Azure Resource Manager'
           azureSubscriptionEndpoint: 'Azure-Terraform-Connection'
-          azureResourceGroup: '$(AKS_RESOURCE_GROUP)'
-          kubernetesCluster: '$(AKS_CLUSTER_NAME)'
+          azureResourceGroup: ${{ parameters.resource_group }}
+          kubernetesCluster: ${{ parameters.cluster_name }}
           useClusterAdmin: true
 
       - script: |
-          echo "Deploying to Namespace: ${{ parameters.environment }}"
-          kubectl apply -f deployment.yaml -n ${{ parameters.environment }}
-          kubectl apply -f service.yaml -n ${{ parameters.environment }}
+          echo "Deploying to Namespace: ${{ parameters.namespace }}"
+          kubectl apply -f deployment.yaml -n ${{ parameters.namespace }}
+          kubectl apply -f service.yaml -n ${{ parameters.namespace }}
         displayName: 'Apply Kubernetes Deployment'
