@@ -98,5 +98,7 @@ stages:
           echo "Deploying to Namespace: ${{ parameters.namespace }}"
           kubectl apply -f deployment.yaml -n ${{ parameters.namespace }} --validate=false
           kubectl apply -f service.yaml -n ${{ parameters.namespace }} --validate=false
+          kubectl get svc myappabb-service
+          echo " Get the IP of the sevice and access the application"
         displayName: 'Apply Kubernetes Deployment (Validation Off)'
 
