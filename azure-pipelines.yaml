@@ -11,7 +11,7 @@ parameters:
   - name: namespace
     displayName: 'Select Deployment Namespace'
     type: string
-    default: 'dev'
+    default: 'nonprod'
     values:
       - nonprod
       - preprod
