@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: myappabb
-          image: acrdemoabb.azurecr.io/myappabb:latest .
+          image: acrdemoabb.azurecr.io/sampleapp:latest .
           imagePullPolicy: Always
           ports:
             - containerPort: 3000  # This is where your app listens
