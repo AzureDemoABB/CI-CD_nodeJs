@@ -47,7 +47,7 @@ stages:
     steps:
     - script: |
         docker build -t ${{ parameters.acr_name }}.azurecr.io/${{ parameters.image_name }}:$(TAG) .
-        echo "$(ACR_PASSWORD)" | docker login $(ACR_NAME).azurecr.io -u $(ACR_USERNAME) --password-stdin
+        echo "$(ACR_PASSWORD)" | docker login ${{ parameters.acr_name }}.azurecr.io -u $(ACR_USERNAME) --password-stdin
         docker push ${{ parameters.acr_name }}.azurecr.io/${{ parameters.image_name }}:$(TAG)
       displayName: 'Build and Push Docker Image'
 
