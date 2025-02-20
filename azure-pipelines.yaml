@@ -4,8 +4,10 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  TAG: $(Build.BuildId)
-  -group: ACR-Secrets  # This will fetch ACR_USERNAME and ACR_PASSWORD
+  - group: ACR-Secrets
+  - name: TAG
+    value: $(Build.BuildId)
+
 
 parameters:
   - name: namespace
