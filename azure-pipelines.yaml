@@ -6,7 +6,7 @@ pool:
 variables:
   - group: ACR-Secrets
   - name: TAG
-    value: $(Build.BuildId)
+    value: abb
 
 
 parameters:
