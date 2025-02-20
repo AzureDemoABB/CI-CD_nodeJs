@@ -96,6 +96,12 @@ stages:
       
       - script: |
           echo "Deploying to Namespace: ${{ parameters.namespace }}"
+          kubectl create secret docker-registry acr-secret \
+          --docker-server=$(ACR_USERNAME).azurecr.io \
+          --docker-username=$(ACR_USERNAME) \
+          --docker-password=$(ACR_PASSWORD) \
+          --namespace=${{ parameters.namespace }}
+
           kubectl apply -f deployment.yaml -n ${{ parameters.namespace }} --validate=false
           kubectl apply -f service.yaml -n ${{ parameters.namespace }} --validate=false
           kubectl get svc myappabb-service
